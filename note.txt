@@ -1,0 +1,400 @@
+
+Sun Mar 31 19:17:31 EDT 2013
+Emacs GO major mode:
+http://golang.org/misc/emacs/
+
+Needs yasnippet
+M-x package-install
+read more from github
+
+
+what if I change 'package main' to 'package mypkg'
+and go run mypkg.go?
+cannot run non-main package
+
+Method
+type Vertex struct {
+    X, Y float64
+}
+
+func (v *Vertex) Abs() float64 {
+    return math.Sqrt(v.X*v.X + v.Y*v.Y)
+}
+
+Type
+type Abser interface {
+    Abs() float64
+}
+
+func main() {
+    var a Abser
+    f := MyFloat(-math.Sqrt2)
+    v := Vertex{3, 4}
+
+    a = f  // a MyFloat implements Abser
+    a = &v // a *Vertex implements Abser
+    a = v  // a Vertex, does NOT
+    // implement Abser
+
+    fmt.Println(a.Abs())
+}
+
+e.g.
+type error interface {
+    Error() string
+}
+
+I don't know how to write a Reader of a Reader.
+Let me write it out.
+A io stream requires a Reader and a Writer
+You read, do something, and write.
+
+Time
+start := time.Now()
+time.Since(start)
+time.Hour
+
+I feel like Interface is the key to large scale GO programming.
+How we abstract data types and actions, without an object.
+URL: http://jordanorelli.tumblr.com/post/32665860244/how-to-use-interfaces-in-go
+
+type Animal interface {
+     Speak () string
+}
+
+type Dog struct {}
+type Fish struct {}
+
+?can a dog Speak?
+?can a fish Speak?
+Wait, we have to see whether
+func (d Dog) Speak () string {}
+
+func main() {
+    animals := []Animal{Dog{}, Cat{}, Llama{}, JavaProgrammer{}}
+    for _, animal := range animals {
+        fmt.Println(animal.Speak())
+    }
+}
+
+What has interface achieved here?
+You want to treat the data equally (same action/function)
+you want to have the same 'interface' or you kind of force yourself into agree
+with certain constraints -- or types. You agree that every THING has a type.
+You can use type system to check them at COMPILE time.
+
+
+
+Well, here is the link to Russ Cox's
+http://research.swtch.com/interfaces
+It's a bit old, 2009. I don't know how much has changed.
+
+
+Function types and closure
+http://jordanorelli.tumblr.com/post/42369331748/function-types-in-go-golang
+Generally you want to save it to a variable, stick it in a data
+structure, or pass it to another function. It’s fairly common to see
+this type of thing hanging out in Go code:
+
+fn := func() {
+    fmt.Println("hello")
+}
+
+
+Random numbers: rand.Seed, rand.Intn
+rand.Seed(time.Now().Unix())
+type binFunc func(int,int) int
+fns := []binFunc{
+    func(x,y int) int { return x + y}
+}
+fn := fns[rand.Intn(len(fns))]
+
+Functions as Field in a struct
+type op struct {
+     name string
+     fn func(int,int) int
+}
+
+ops := []op{
+    {"add", func(x,y int) int {return x + y}}}
+
+O := ops[rand.Intn(len(ops))]
+fmt.Println(o.name, x, y, o.fn(x,y))
+
+Functions as stored in maps
+map[string]binFunc
+
+Function recursive!
+type walkFn func(*int) walkFn
+
+In Go, any type that has an Error() string method is a valid error type, so
+our function can serve as both a function and an error.
+
+One more pieces of Go interfaces
+URL: http://www.airs.com/blog/archives/277
+In Go, the word interface is overloaded to mean several different things.
+Every type has an interface, which is the set of methods defined for that type.
+e.g.,
+type S struct { i int}
+func (p *S) Get() int { return p.i }
+func (p *S) Put(v int) {p.i = v }
+
+You can also define an interface type, which is simply a set of methods.
+type I interface {
+     Get() int
+     Put(int)
+}
+
+S is a valid implementation for I, because it defines the two methods
+which I requires. Note there is no explicit declaration that s implements I.
+
+SKIP the boring details of implementation, we concluded that
+Go combines interface values, static type checking, dynamic runtime
+conversion, and no requirement for explicitly declaring that
+a type satisfies an interface.
+
+I Found a wonderful book on Go
+http://www.miek.nl/files/go/
+https://github.com/miekg/gobook
+
+a book on Network programming with Go
+http://jan.newmarch.name/go/
+
+a book called 'An introduction to programming in Go.'
+http://www.golang-book.com/
+
+
+
+URL:
+gostart@github
+https://github.com/alco/gostart
+
+golang@reddit
+http://www.reddit.com/r/golang/
+
+http://s3.amazonaws.com/golangweekly/go_for_pythonistas.pdf
+
+http://www.xaprb.com/blog/2013/03/20/building-mysql-database-applications-with-go/
+
+Go standard library (book)
+http://thestandardlibrary.com/go.html
+
+Go by Example
+https://gobyexample.com/
+
+Writing Go in Emacs
+http://dominik.honnef.co/posts/2013/03/writing_go_in_emacs/
+
+http://code.google.com/p/go/codesearch
+
+http://www.golangweekly.com/
+
+
+
+
+
+For example, one of the “controversial”† aspects of Go is that it uses
+case to specify visibility. Instead of having a system of public,
+private, and shared class members, visibility is at the level of the
+package. Lowercase names like var a are visible only from the current
+package, but uppercase names like var A are publicly visible, and so
+on for types, functions, struct members, methods, etc. It is
+blisteringly obvious in hindsight that enforcing visibility at the
+package level instead of the class level is the right way to do it.
+
+Another example of Go’s modernity is the decision to make the
+directory the fundamental unit of packaging. While you can just
+compile and run an individual file using go run filename.go, Go
+encourages you to set the environmental variable $GOPATH and then put
+your projects into $GOPATH/src/projectname/. When you run go install
+project, it will compile that directory and put the executable into
+$GOPATH/bin/. Why is this useful? It leads to a couple of nice
+advantages. First, since it’s done by directory, you can make each
+package you write its own git (or whatever) repository. Second, if
+your project file gets too long, you can break it up into multiple
+files that automatically get stitched into one at compile time. Not a
+big deal, but nice. Third, there’s no need for something like Python’s
+virtualenv. If you need to have different versions of the same library
+installed simultaneously for two different projects, just switch
+between two different $GOPATHs. Fourth, there’s no question of
+Python’s relative import headaches. Imports are always either rooted
+in $GOPATH/src/ or in the built-ins ($GOROOT/src/pkg/).
+
+
+Go is rad. It’s not my everyday language (that’s still Python), but
+it’s definitely a fun language to use, and one that would be great for
+doing big projects in. If you’re interested in learning about Go, I
+recommend doing the tour then reading the spec while you put test
+programs into the Playground. The spec is very short and quite
+readable, so it’s great way to learn Go.
+
+What a wonderful day of Learning Go?
+
+
+2013.03.31
+http://tech.t9i.in/2013/01/why-program-in-go/
+single binary: great for deployment
+cross compilation: great for deployment
+built-in profiling: great for development
+shareable code:
+small language:
+server programming: great
+easy concurrency: Go channels and goroutines
+multi-core, high performance:
+
+Dataflow programming and declarative concurrency
+'It is the centre-piece of Go's language features.
+[ tech.t9i.in ]
+
+
+
+
+
+ack makes it easy to find the location files.
+ack -g Foo.class
+vim `ack -g Foo.class` +324
+
+Rob Pike's Go at Google talk (2012)
+http://talks.golang.org/2012/splash.slide#60
+
+What is Go?
+concurrent:
+garbage-collected:
+efficient:
+scalable:
+
+Go was designed by and for people who write, read and debug
+large software systems.
+uncontrolled dependencies
+language complexity
+poor program understanding (documentation)
+
+Primary design of Go
+roughly C-like
+
+Unused 'stuff' cause error at compile time
+e.g., import only 'exported' vs. #include
+
+No circular imports
+it may cause 'occasional minor pain', however great
+reduction in annoyance overall.
+
+'structural typing' again
+
+Package combines properties of library, name space, and module.
+package json
+
+Remote packages
+ Can be a file, can be a URL:
+go get github.com/4ad/doozer   // Command to fetch package
+import "github.com/4ad/doozer" // Doozer client's import statement
+var client doozer.Conn         // Client's use of package
+
+Go aims for clean syntax
+name before type  type T struct {a, b int}
+easier to parse, no symbol table needed
+
+
+Function syntax
+
+Function on type T:
+
+         func Abs(t T) float64
+
+Method of type T:
+
+       func (t T) Abs() float64
+
+Variable (closure) of type T:
+
+         negAbs := func(t T) float64 { return -Abs(t) }
+
+In Go, functions can return multiple values. Common case: error.
+
+   func ReadByte() (c byte, err error)
+
+   c, err := ReadByte()
+   if err != nil { ... }
+
+More about errors later.
+
+
+??? why he said 'variable (closure) of type T?'
+
+
+Export syntax is easy: upper case initial letter.
+
+
+Scope: universe, package, file(for imports only), function, block
+
+Not in C:
+concurrency
+garbage collection: day 1 decision
+interface types: composition not inheritance
+reflection
+type switches
+
+
+Go is object-oriented
+Go does not have classes or subtype inheritance
+What does this mean?
+
+In Go an interface is 'just' a set of methods.
+type Hash interface {
+     Write(p []byte) (n int, err error)
+     Sum(b []byte) []byte
+     Reset()
+     Size() int
+     BlockSize() int
+}
+
+type Reader interface {
+     Read(p []byte) (n int, err error)
+}
+Reader (plus the complementary Writer) makes it easy to chain. [Explain]
+
+
+Tools
+gofmt
+gofix
+
+I searched for rob pike and get to know Acme, Plan 9 etc.
+http://rob.pike.usesthis.com/ The world should provide me my computing
+environment and maintain it for me and make it available everywhere.
+
+Read books (sample chapter) of Go standard library.
+It comes with source code.
+{files needs to be linked to anything I refer to.
+In a superlinked work, imagine that the files/links to the 'S3'
+as an object}
+e.g., code is link to github
+If everything is on the web (local disk will die!)
+
+https://github.com/darkhelmet/go-thestdlib
+
+Read and practiced chapter on tar/zip.
+How can we make a pipeline chaining multiple streams?
+
+You cracked the code! :)
+the secret is the b.r.Read()
+
+I still can't wrap around the 'interface'.
+Is it mainly for 'static type checking'? so that at compile time,
+the compiler will err when the type don't conform to the interface?
+So interface is a contract?
+
+I will write a rot13 derot13 to test the pipeline.
+Yes. it works. Now, the mistry is that I only implemented a Read function.
+How does it write to the os.Stdout or the next in the io stream?
+
+Writing this within acme, a integrated development environment.
+Text is so important for our communication and understanding, 
+discussion of ideas.
+
+Let me read Rob Pike's paper on acme and see what else we can do with it.
+
+Russ Cox also mentioned  to associate file types with applications.
+
+
+This kind of helps creating a working script for any work done, right?
+
