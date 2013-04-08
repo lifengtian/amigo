@@ -388,7 +388,7 @@ Yes. it works. Now, the mistry is that I only implemented a Read function.
 How does it write to the os.Stdout or the next in the io stream?
 
 Writing this within acme, a integrated development environment.
-Text is so important for our communication and understanding, 
+Text is so important for our communication and understanding,
 discussion of ideas.
 
 Let me read Rob Pike's paper on acme and see what else we can do with it.
@@ -398,3 +398,226 @@ Russ Cox also mentioned  to associate file types with applications.
 
 This kind of helps creating a working script for any work done, right?
 
+
+
+
+
+
+
+Learning Go is a book written by Miek Gieben
+(It will be great for a site like 4clojure)
+
+Given a program, how can you identify the keywords?
+(I guess one way is to identify it by frequency from
+different code bases written by different people.
+It may miss the rarely used keywords though.)
+
+Oh, I found the text package and scan.Scanner do the jobs for me.
+
+There must be a Go interpret to make learning easier.
+
+
+type File struct {
+    // contains filtered or unexported fields
+}
+
+// File represents an open file descriptor.
+type File struct {
+     *file
+}
+
+// file is the real representation of *File.
+// The extra level of indirection ensures that no clients of os
+// can overwrite this data, which could cause the finalizer
+// to close the wrong file descriptor.
+type file struct {
+     fd      int
+     name    string
+     dirinfo *dirInfo // nil unless directory being read
+     nepipe  int32    // number of consecutive EPIPE in Write
+                             }
+File processing with Go
+Flesh and meat
+
+for read access,
+    file, err := os.Open("filename")
+    if err != nil { log.Fatal(err) }
+
+
+return fmt.Errorf("failed %s", err)
+log.Fatal(err)
+log.Fatalf("failed %s", err)
+
+
+
+I always forgot to add package name, e.g., os.O_WRONLY,
+I still treat import as pulling in all the exported names such that
+no prefix is needed.
+
+io.Copy is doing magic here:
+I say io.Copy(to, from)
+to and from are nothing but two File struct, which implements Read/write?
+
+// Copy copies from src to dst until either EOF is reached
+// on src or an error occurs.  It returns the number of bytes
+// copied and the first error encountered while copying, if any.
+//
+// A successful Copy returns err == nil, not err == EOF.
+// Because Copy is defined to read from src until EOF, it does
+// not treat an EOF from Read as an error to be reported.
+//
+// If dst implements the ReaderFrom interface,
+// the copy is implemented by calling dst.ReadFrom(src).
+// Otherwise, if src implements the WriterTo interface,
+// the copy is implemented by calling src.WriteTo(dst).
+
+Woo, I can use Acme (Macbook pro touchpad, select and touch fingers touch to copy,
+select and option to cut, fun)
+
+To fully understand the rot13, tian example, read io.go
+
+
+= vs :=
+_, err := io.Copy(to,from)
+: no new variables on left side of :=
+
+
+wooooooooooo, it works, the tokenizer (see word.go ) text/scanner works wonders!
+
+At first, I used s.Scan, however it return type rune, and I need string.
+TokenText or TokenString
+
+// TokenString returns a printable string for a token or Unicode character.
+func TokenString(tok rune) string {
+     if s, found := tokenString[tok]; found {
+        return s
+        }
+        return fmt.Sprintf("%q", string(tok))
+}
+
+
+I used TokenString and guess what happens:
+String: 6
+"=": 8
+"[": 2
+...
+
+
+where are all the strings?!
+
+To know the details of TokenText, read scanner.go
+
+Peek the internals of a computation?
+
+I found an interesting code snippet in bzip2.go
+This implements a custom error type and its error message.
+
+type StructuralError string
+
+func (s StructuralError) Error() string {
+     return "bzip2 data invalid: " + string(s)
+     }
+return StructuralError("non-Huffman entropy encoding")
+
+
+     buf       []byte    // stores Burrows-Wheeler transformed data.
+     well, []byte declaration?
+
+copy is select/control;
+cut is select/option
+
+
+Magic number?
+const bzip2FileMagic = 0x425a // "BZ"
+const bzip2BlockMagic = 0x314159265359
+const bzip2FinalMagic = 0x177245385090
+
+
+
+
+April 4, 2013
+Go nuts now 1.1beta1
+URL: http://tip.golang.org/doc/go1.1
+
+last return is not necessary if
+
+ReadLine, ReadBytes, ReadString in the bufio
+now we have a simpifier : Scanner (we see the scanner in the Text package?)
+
+scanner := bufio.NewScanner (os.Stdin)
+for scanner.Scan() {
+    fmt.Println(scanner.Text() )
+}
+
+if err := scanner.Err(); err != nil {
+   fmt.Fprintln(os.Stderr, "reading standard input:", err)
+}
+
+I shall study the codes in
+http://tip.golang.org/pkg/bufio/#example_Scanner_custom
+
+scanner.Split(a_function)
+e.g.
+scanner.Split(bufio.ScanWords)
+
+Browse the pkg, find strings:  TrimPrefix and TrimSuffix
+HasSuffix : .bam  if strings.HasSuffix("hel.bam", ".bam")  {}
+Index : Index("/hello/world/t.bam", "/")
+Join: Join(s, "\t")
+
+?how about string1+string2?
+yes, it works.
+
+
+Woo, Look at this
+func main(){
+        s := regexp.MustCompile(`ESP=([\.\d]+);`)
+        m := s.FindString("A=123;ESP=0.04;KG=0.1")
+        fmt.Println(m)
+}
+
+
+raw string to avoid having to quote the backslashes
+
+
+
+
+April 5, 2013
+I also see using "errors"
+err := errors.New("A specific error message")
+which can be a separate file in errors.go
+
+
+config file: I will try json first.
+TODO: learn to work with json  "encoding json"
+well, so easy, just to
+var conf config
+json.Unmarshal(file_contents, & conf)
+
+JSON and Go JavaScript Object Notation
+e.g., http://json.org/
+object :     { key1:value1, key2:value2, }
+array  :     [ value1, value2, ]
+value  :     string, number, object, array, true, false, null
+
+*** type assertion
+i.(type)
+
+Quite interesting to work with interface{}
+f.(map[string]interface{})
+
+
+
+Read all from a small file to []byte:
+it is a general function to slurp file into memory
+and later on other functions to parse
+func readFile(path string) (contents []byte, err error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	reader := bufio.NewReader(file)
+
+	contents, err = ioutil.ReadAll(reader)
+	return
+}
