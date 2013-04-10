@@ -1,0 +1,1 @@
+{"Ref":"/mnt/here/ref","Dbsnp":"/mnt/there/dbsnp","Mills":"/mnt/here/again/mills"}
