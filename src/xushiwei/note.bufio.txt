@@ -1,0 +1,114 @@
+Let's take a look at the buffered I/O of Go standard library.
+
+Background: We are dealing with text files (record-based, e.g., csv, each line ("\n") represents
+a record. Now, more and more, we are working with XML or serialized file which can easily
+be read into memory as a data structure.
+
+BASICS:
+Ways to read a file into a structure
+
+1) io.ioutil ReadFile 
+func ReadFile(filename string) ([]byte, error)
+
+ReadFile reads the file named by filename and returns the contents. A successful call returns err == nil, not err == EOF. Because ReadFile reads the whole file, it does not treat an EOF from Read as an error to be reported. 
+
+string([]byte) converts []byte to string
+
+
+
+2) bufio.ReadLine or ReadString
+It begins with os.Open(filename)
+then,
+    br := bufio.NewReader(file)
+
+Note: NewReader returns
+func NewReader(rd io.Reader) *Reader
+
+Note:  we have to deal with the io.EOF as an Error (wierd, it is an error?)
+
+
+func (b *Reader) ReadString(delim byte) (line string, err error)
+To parse the string, one can do strings.Fields
+
+Once things live in the RAM, we have to parse them (originally, it is a parsing issue!)
+We will use strings to split the string into parts and strconv.Atoi(str) to convert it to numbers, etc.
+
+We usually make ( [] int,0) and append to the slice later on by append(originalslice, strconv.Atoi(str) )
+
+
+3) once read and processed, we use WriteString to output to a file.
+file, err := os.Create(outfile)
+for _, value := range values { 
+	str := strconv.Itoa(value) 
+	file.WriteString(str + "\n")
+}
+
+
+DETAILS:
+Why we call it a buffered I/O package? Let's look at the following code:
+return &Reader{
+    		buf:          make([]byte, size),
+    		rd:           rd,
+    		lastByte:     -1,
+    		lastRuneSize: -1,
+    	}
+
+buf is a slice of capacity size, intialized to 0. func fill 
+
+    67	// fill reads a new chunk into the buffer.
+    68	func (b *Reader) fill() {
+    69		// Slide existing data to beginning.
+    70		if b.r > 0 {
+    71			copy(b.buf, b.buf[b.r:b.w])
+    72			b.w -= b.r
+    73			b.r = 0
+    74		}
+    75	
+    76		// Read new data.
+    77		n, e := b.rd.Read(b.buf[b.w:])
+    78		b.w += n
+    79		if e != nil {
+    80			b.err = e
+    81		}
+    82	}
+
+   118	// Read reads data into p.
+   119	// It returns the number of bytes read into p.
+   120	// It calls Read at most once on the underlying Reader,
+   121	// hence n may be less than len(p).
+   122	// At EOF, the count will be zero and err will be io.EOF.
+   123	func (b *Reader) Read(p []byte) (n int, err error) {
+   124		n = len(p)
+   125		if n == 0 {
+   126			return 0, b.readErr()
+   127		}
+   128		if b.w == b.r {
+   129			if b.err != nil {
+   130				return 0, b.readErr()
+   131			}
+   132			if len(p) >= len(b.buf) {
+   133				// Large read, empty buffer.
+   134				// Read directly into p to avoid copy.
+   135				n, b.err = b.rd.Read(p)
+   136				if n > 0 {
+   137					b.lastByte = int(p[n-1])
+   138					b.lastRuneSize = -1
+   139				}
+   140				return n, b.readErr()
+   141			}
+   142			b.fill()
+   143			if b.w == b.r {
+   144				return 0, b.readErr()
+   145			}
+   146		}
+   147	
+   148		if n > b.w-b.r {
+   149			n = b.w - b.r
+   150		}
+   151		copy(p[0:n], b.buf[b.r:])
+   152		b.r += n
+   153		b.lastByte = int(b.buf[b.r-1])
+   154		b.lastRuneSize = -1
+   155		return n, nil
+   156	}
+

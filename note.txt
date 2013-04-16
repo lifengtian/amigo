@@ -621,3 +621,12 @@ func readFile(path string) (contents []byte, err error) {
 	contents, err = ioutil.ReadAll(reader)
 	return
 }
+
+
+
+April 16, 2013
+Finished Chap 2 of Shiwei Xu's Go book.
+I skipped the bubblesort and quicksort though. 
+Acme is pretty cool!
+
+
