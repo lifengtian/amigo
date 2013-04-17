@@ -9,11 +9,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
+	"net/http"
 )
+
+import _ "net/http/pprof"
 
 var (
 	sampleName string
@@ -21,7 +25,6 @@ var (
 
 	dryrun *bool = flag.Bool("dryrun", false, "dry run")
 	help   *bool = flag.Bool("help", false, "help")
-	
 )
 
 func MyPrintf(s string, i int) {
@@ -42,6 +45,8 @@ func isFile(filename string) bool {
 
 func Begin() {
 	fmt.Printf("Begin at %v\n", time.Now())
+	addrs, _ := net.InterfaceAddrs()
+	fmt.Println(addrs)
 }
 
 func Finish() {
@@ -95,6 +100,9 @@ func main() {
 
 	if !*dryrun {
 		Begin()
+		go func() {
+				log.Println(http.ListenAndServe("localhost:6060", nil))
+		}()
 	}
 
 	var workflow_json []byte
@@ -426,9 +434,8 @@ func main() {
 		<-c
 	}
 
-
-	ugzip :=	work["BGZIP"] + " -c " + work["TMPDIR"] + "/SID" + sampleName + ".UG.vcf  > " + work["TMPDIR"] + "/SID" + sampleName + ".UG.vcf.gz " + " ; " + work["TABIX"] + " -p vcf " + work["TMPDIR"] + "/SID" + sampleName + ".UG.vcf.gz "
-	hczip :=	work["BGZIP"] + " -c " + work["TMPDIR"] + "/SID" + sampleName + ".HC.vcf  > " + work["TMPDIR"] + "/SID" + sampleName + ".HC.vcf.gz " + " ; " + work["TABIX"] + " -p vcf " + work["TMPDIR"] + "/SID" + sampleName + ".HC.vcf.gz "
+	ugzip := work["BGZIP"] + " -c " + work["TMPDIR"] + "/SID" + sampleName + ".UG.vcf  > " + work["TMPDIR"] + "/SID" + sampleName + ".UG.vcf.gz " + " ; " + work["TABIX"] + " -p vcf " + work["TMPDIR"] + "/SID" + sampleName + ".UG.vcf.gz "
+	hczip := work["BGZIP"] + " -c " + work["TMPDIR"] + "/SID" + sampleName + ".HC.vcf  > " + work["TMPDIR"] + "/SID" + sampleName + ".HC.vcf.gz " + " ; " + work["TABIX"] + " -p vcf " + work["TMPDIR"] + "/SID" + sampleName + ".HC.vcf.gz "
 
 	fmt.Fprintf(os.Stderr, "ugzip: %s\n", ugzip)
 	fmt.Fprintf(os.Stderr, "hczip: %s\n", hczip)
@@ -442,14 +449,9 @@ func main() {
 		<-c
 	}
 
-
-
-
-
-
 	//copy back
 	excludes := "--exclude dedup.bam --exclude indelrealigner.bam --exclude dedup.bai --exclude indelrealigner.bai --exclude sorted.bai --exclude sorted.bam --exclude .sai --exclude .vcf "
-	copyBack := work["S3cmd"] + " " + work["S3cfg.output"] + " " + excludes + " sync " + work["TMPDIR"] + " " + work["BAMBUCKET"] + "/" 
+	copyBack := work["S3cmd"] + " " + work["S3cfg.output"] + " " + excludes + " sync " + work["TMPDIR"] + " " + work["BAMBUCKET"] + "/"
 	fmt.Fprintf(os.Stderr, "copyBack: %s\n", copyBack)
 	cmds = []Cmd{{copyBack, ""}}
 	c = make(chan int, len(cmds))
