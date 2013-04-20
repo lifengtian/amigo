@@ -125,15 +125,18 @@ func main() {
 
 	//fmt.Printf("Length of workflow json: %d\n", len(work))
 
-	work["JAVAGATK"] = strings.Join([]string{work["JAVABIN"], "-Xmx6g -Djava.io.tmpdir=/mnt/tmp  -jar", work["GATKJAR"], "-et NO_ET -K", work["GATKKEY"]}, " ")
+	work["TMPDIR"] = "/mnt/run/" + sampleName
+	work["JAVAGATK"] = work["JAVABIN"] + " -Xmx6g -Djava.io.tmpdir="+work["TMPDIR"] + " -jar "+ work["GATKJAR"] + " -et NO_ET -K " + work["GATKKEY"]
 
 	work["UGinterval"] = strings.Join([]string{"-L", work["Exons"], " -L", work["TargetBed"], "--interval_padding 50 "}, " ")
 
 	//sampleName := os.Args[2]
-	work["TMPDIR"] = "/mnt/run/" + sampleName
 
 	//download db and tools from s3 
-	prepDirs := " sudo mkdir -p " + work["PIPELINE"] + " ; sudo chmod 777 " + work["PIPELINE"] + " ; sudo mkdir -p " + work["TMPDIR"] + " ; sudo chmod 777 " + work["TMPDIR"]
+	prepDirs := " sudo mkdir -p " + work["PIPELINE"] + " ; sudo chmod 777 " + work["PIPELINE"] + " ; sudo mkdir -p " + work["TMPDIR"] + " ; sudo chmod 777 " + work["TMPDIR"] +
+		" ; sudo mkdir -p " + work["Fastq"] + " ;  sudo chmod 777 " + work["Fastq"]  +
+		" ; mkdir -p " + work["Fastq"] + "/" + sampleName
+
 	cmds := []Cmd{{prepDirs, ""}}
 	c := make(chan int, len(cmds))
 	for i, v := range cmds {
