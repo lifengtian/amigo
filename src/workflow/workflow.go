@@ -1,4 +1,6 @@
-//Package Cmd experiments with external processes
+//Package
+// 
+// Example of working with processes
 // https://gobyexample.com/spawning-processes
 package main
 
@@ -17,7 +19,9 @@ import (
 	"net/http"
 )
 
+//TODO : pprof not yet working
 import _ "net/http/pprof"
+
 
 var (
 	sampleName string
@@ -31,9 +35,19 @@ func MyPrintf(s string, i int) {
 	fmt.Fprintf(os.Stderr, s, i)
 }
 
+// TODO: Check S3 object
+func isS3object (bucketName string  ) (ok bool) {
+	return true
+}
+
+// Check file status
 func isFile(filename string) bool {
 	if strings.HasPrefix(filename, "s3:") {
-		return true
+		if  isS3object( filename )  {
+			return true
+		} else {
+			return false
+		}
 	}
 
 	_, err := os.Stat(filename)
@@ -86,6 +100,22 @@ func (cmd Cmd) Do(c chan int) {
 	c <- 1
 }
 
+
+func runIt (cmds []Cmd) (ok bool) {
+	c := make(chan int, len(cmds))
+	for i, v := range cmds {
+		MyPrintf("cmds %d channel\n", i)
+
+		go v.Do(c)
+	}
+	for i := 0; i < len(cmds); i++ {
+		<-c
+	}
+	
+	return true
+}
+
+
 var work map[string]string
 
 func main() {
@@ -93,6 +123,7 @@ func main() {
 	flag.StringVar(&filename, "config", "", "workflow configure file (json format)")
 	flag.StringVar(&sampleName, "sn", "", "sample name")
 	flag.Parse()
+	
 	if *help {
 		flag.Usage()
 		os.Exit(1)
@@ -107,13 +138,8 @@ func main() {
 
 	var workflow_json []byte
 
-	//processing arguments
-	//if len(os.Args) < 3 {
-	//	log.Fatalf("usage: %s json sampleName", os.Args[0])
-	//}
-	//filename := os.Args[1]
 
-	//	filename := flag.Arg[0]
+
 	//read from file
 	workflow_json, err := ioutil.ReadFile(filename)
 
@@ -121,32 +147,22 @@ func main() {
 	if err != nil {
 		fmt.Println("error:", err)
 	}
-	//fmt.Printf("workflow : %v", work)
+	fmt.Fprintf(os.Stdout, "workflow : %v", work)
 
-	//fmt.Printf("Length of workflow json: %d\n", len(work))
-
+	// Set up paths
 	work["TMPDIR"] = "/mnt/run/" + sampleName
+	
 	work["JAVAGATK"] = work["JAVABIN"] + " -Xmx6g -Djava.io.tmpdir="+work["TMPDIR"] + " -jar "+ work["GATKJAR"] + " -et NO_ET -K " + work["GATKKEY"]
 
-	work["UGinterval"] = strings.Join([]string{"-L", work["Exons"], " -L", work["TargetBed"], "--interval_padding 50 "}, " ")
+	work["UGinterval"] =" -L " + work["Exons"] + "  -L " + work["TargetBed"] +  " --interval_padding 50 "
 
-	//sampleName := os.Args[2]
 
 	//download db and tools from s3 
 	prepDirs := " sudo mkdir -p " + work["PIPELINE"] + " ; sudo chmod 777 " + work["PIPELINE"] + " ; sudo mkdir -p " + work["TMPDIR"] + " ; sudo chmod 777 " + work["TMPDIR"] +
 		" ; sudo mkdir -p " + work["Fastq"] + " ;  sudo chmod 777 " + work["Fastq"]  +
 		" ; mkdir -p " + work["Fastq"] + "/" + sampleName
 
-	cmds := []Cmd{{prepDirs, ""}}
-	c := make(chan int, len(cmds))
-	for i, v := range cmds {
-		MyPrintf("cmds %d channel\n", i)
-
-		go v.Do(c)
-	}
-	for i := 0; i < len(cmds); i++ {
-		<-c
-	}
+	runIt( []Cmd{{prepDirs, ""}} )
 
 	prepTools := ""
 
