@@ -20,7 +20,8 @@ func main() {
 		panic(err)
 	}
 	s := s3.New(auth, aws.USEast)
-	pre := "tianl/Glaucoma"
+	//pre := "tianl/Glaucoma"
+	pre := ""
 	b := s.Bucket("caglifeng1")
 	l, _ := b.List(pre, "", "", 5000)
 	fmt.Printf("%+v\n", l)

@@ -203,7 +203,7 @@ func (work Workflow) GetToolsDBs(dryrun bool) {
 	RunIt(dryrun, []Cmd{{prepDirs, ""}})
 
 	if !IsFile(work["PIPELINE"] + "/" + work["Tools"]) {
-		tools := work["S3cmd"] + " " + work["S3cfg.pipeline"] + " get s3://cagpipelines/" + work["Tools"] + " " + work["PIPELINE"] + "/"
+		tools := work["S3cmd"] + " -c " + work["S3cfg.pipeline"] + " get s3://cagpipelines/" + work["Tools"] + " " + work["PIPELINE"] + "/"
 		RunIt(dryrun, []Cmd{{tools, ""}})
 
 		prepTools := " cd " + work["PIPELINE"] + ";" + " tar jxvf " + work["Tools"]
@@ -211,7 +211,7 @@ func (work Workflow) GetToolsDBs(dryrun bool) {
 	}
 
 	if !IsFile(work["PIPELINE"] + "/" + work["DBs"]) {
-		dbs := work["S3cmd"] + " " + work["S3cfg.pipeline"] + " get s3://cagpipelines/" + work["DBs"] + " " + work["PIPELINE"] + "/"
+		dbs := work["S3cmd"] + " -c " + work["S3cfg.pipeline"] + " get s3://cagpipelines/" + work["DBs"] + " " + work["PIPELINE"] + "/"
 		RunIt(dryrun, []Cmd{{dbs, ""}})
 
 		prepDBs := " cd " + work["PIPELINE"] + ";" + " tar jxvf " + work["DBs"]
@@ -231,7 +231,7 @@ func (work Workflow) Run(dryrun bool) {
 	work.DoBQSR(dryrun)
 	work.DoReduceBAM(dryrun)
 	work.DoUnifiedGenotyper(dryrun)
-	work.DoHaplotypeCaller(dryrun)
+//	work.DoHaplotypeCaller(dryrun)
 	work.CopyBack(dryrun)
 }
 

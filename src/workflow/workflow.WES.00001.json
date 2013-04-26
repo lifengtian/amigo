@@ -29,6 +29,7 @@
 "TABIX":"/mnt/cagpipelines/tools/bin/tabix",
 "BGZIP":"/mnt/cagpipelines/tools/bin/bgzip",
 "BWA":"/mnt/cagpipelines/tools/bin/bwa",
+"BWAaln":" aln -t 4 ",
 "LB":"2x90",                                                                                                                                                                                      
 "PL":"illumina",
 "PU":"BGI",
