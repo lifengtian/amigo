@@ -121,12 +121,6 @@ func (w Workflow) Parse(jsonFile string) (err error) {
 		return
 	}
 
-	// Set up paths
-	w["JAVAGATK"] = w["JAVABIN"] + " -Xmx6g -Djava.io.tmpdir=" + w["TMPDIR"] + " -jar " + w["GATKJAR"] + " -et NO_ET -K " + w["GATKKEY"]
-
-	// Prepare interval, only make sense for exome
-	w["UGinterval"] = " -L " + w["Exons"] + "  -L " + w["TargetBed"] + " --interval_padding 50 "
-
 	return
 }
 
@@ -181,6 +175,9 @@ func (w Workflow) Init(jsonFileName string, sampleName string, dryrun bool) {
 
 	w["TMPDIR"] = w["TMPDIR"] + "/" + sampleName
 	w["sampleName"] = sampleName
+	w["JAVAGATK"] = w["JAVABIN"] + " -Xmx6g -Djava.io.tmpdir=" + w["TMPDIR"] + " -jar " + w["GATKJAR"] + " -et NO_ET -K " + w["GATKKEY"]
+	// Prepare interval, only make sense for exome
+	w["UGinterval"] = " -L " + w["Exons"] + "  -L " + w["TargetBed"] + " --interval_padding 50 "
 
 	w.GetToolsDBs(dryrun)
 
@@ -290,19 +287,18 @@ func (work Workflow) DoBWAAlnPE(dryrun bool) {
 
 // BWA sampe
 func (work Workflow) DoBWASampe(dryrun bool) {
-		sampleName := work["sampleName"]
-			r1 := work["Fastq"] + "/" + sampleName + "/pe_1.fq.gz"
+	sampleName := work["sampleName"]
+	r1 := work["Fastq"] + "/" + sampleName + "/pe_1.fq.gz"
 	r2 := work["Fastq"] + "/" + sampleName + "/pe_2.fq.gz"
 
 	s1 := work["TMPDIR"] + "/pe_1.sai"
 	s2 := work["TMPDIR"] + "/pe_2.sai"
-	
-		lb := work["LB"]
+
+	lb := work["LB"]
 	pl := work["PL"]
 	pu := work["PU"]
 	cn := work["CN"]
-	
-	
+
 	sampe := work["BWA"] + ` sampe -r "@RG\tID:` + sampleName + `\tSM:` + sampleName + `" ` + work["Reference"] + " " + s1 + " " + s2 + " " + r1 + " " + r2 +
 		" | " +
 		work["SAMTOOLS"] + " view -h -S  - " +
@@ -318,24 +314,23 @@ func (work Workflow) DoBWASampe(dryrun bool) {
 
 }
 
-
-func (work Workflow) DoDedup (dryrun bool){
-		sampleName := work["sampleName"]
+func (work Workflow) DoDedup(dryrun bool) {
+	sampleName := work["sampleName"]
 	dedup := work["JAVABIN"] + " -Xmx4g  -jar " + work["PICARD"] + "/MarkDuplicates.jar " + "I=" + work["TMPDIR"] + "/SID" + sampleName + ".sorted.bam " + "O=" + work["TMPDIR"] + "/SID" + sampleName + ".dedup.bam " + " M=" + work["TMPDIR"] + "/SID" + sampleName + ".dedup.metric " + " VALIDATION_STRINGENCY=SILENT CREATE_INDEX=true REMOVE_DUPLICATES=false TMP_DIR=" + work["TMPDIR"]
 	cmds := []Cmd{{dedup, ""}}
 	RunIt(dryrun, cmds)
-	
+
 	flagstat := work["SAMTOOLS"] + " flagstat " + work["TMPDIR"] + "/SID" + sampleName + ".dedup.bam  > " + work["TMPDIR"] + "/SID" + sampleName + ".dedup.bam.flagstat"
 
-hsmetrics := work["JAVABIN"] + " -Xmx4g  -jar " + work["PICARD"] + "/CalculateHsMetrics.jar " + "I=" + work["TMPDIR"] + "/SID" + sampleName + ".dedup.bam " + "O=" + work["TMPDIR"] + "/SID" + sampleName + ".dedup.bam.target_coverage " + " VALIDATION_STRINGENCY=SILENT " + " BI=" + work["TargetPicard"] + " TI=" + work["TargetPicard"] + " TMP_DIR=" + work["TMPDIR"]
+	hsmetrics := work["JAVABIN"] + " -Xmx4g  -jar " + work["PICARD"] + "/CalculateHsMetrics.jar " + "I=" + work["TMPDIR"] + "/SID" + sampleName + ".dedup.bam " + "O=" + work["TMPDIR"] + "/SID" + sampleName + ".dedup.bam.target_coverage " + " VALIDATION_STRINGENCY=SILENT " + " BI=" + work["TargetPicard"] + " TI=" + work["TargetPicard"] + " TMP_DIR=" + work["TMPDIR"]
 
-	cmds = []Cmd{{flagstat,""}, {hsmetrics, ""}}
+	cmds = []Cmd{{flagstat, ""}, {hsmetrics, ""}}
 	RunIt(dryrun, cmds)
 }
 
-func (work Workflow) DoRealigner ( dryrun bool){
-		sampleName := work["sampleName"]
-realigner1 := work["JAVAGATK"] +
+func (work Workflow) DoRealigner(dryrun bool) {
+	sampleName := work["sampleName"]
+	realigner1 := work["JAVAGATK"] +
 		" -R " + work["Reference"] +
 		"    -known " + work["Mills"] +
 		"    -known " + work["Indels"] +
@@ -347,7 +342,7 @@ realigner1 := work["JAVAGATK"] +
 
 	cmds := []Cmd{{realigner1, ""}}
 	RunIt(dryrun, cmds)
-		realigner2 := work["JAVAGATK"] +
+	realigner2 := work["JAVAGATK"] +
 		" -R " + work["Reference"] +
 		"    -I " + work["TMPDIR"] + "/SID" + sampleName + ".dedup.bam " +
 		"    -targetIntervals " + work["TMPDIR"] + "/SID" + sampleName + ".dedup.intervals " +
@@ -358,9 +353,9 @@ realigner1 := work["JAVAGATK"] +
 	RunIt(dryrun, cmds)
 }
 
-func (work Workflow) DoBQSR ( dryrun bool){
-		sampleName := work["sampleName"]
-bqsr1 := work["JAVAGATK"] +
+func (work Workflow) DoBQSR(dryrun bool) {
+	sampleName := work["sampleName"]
+	bqsr1 := work["JAVAGATK"] +
 		" -R " + work["Reference"] +
 		" -knownSites " + work["Dbsnp"] +
 		" -knownSites " + work["Mills"] +
@@ -373,8 +368,8 @@ bqsr1 := work["JAVAGATK"] +
 
 	cmds := []Cmd{{bqsr1, ""}}
 	RunIt(dryrun, cmds)
-	
-		bqsr2 := work["JAVAGATK"] +
+
+	bqsr2 := work["JAVAGATK"] +
 		" -R " + work["Reference"] +
 		" -I " + work["TMPDIR"] + "/SID" + sampleName + ".dedup.indelrealigner.bam " +
 		" -o " + work["TMPDIR"] + "/SID" + sampleName + ".dedup.indelrealigner.recal.bam " +
@@ -385,25 +380,20 @@ bqsr1 := work["JAVAGATK"] +
 	RunIt(dryrun, cmds)
 }
 
-
-
-
-
-func (work Workflow) DoReduceBAM ( dryrun bool){
-		sampleName := work["sampleName"]
+func (work Workflow) DoReduceBAM(dryrun bool) {
+	sampleName := work["sampleName"]
 	reduce := work["JAVAGATK"] +
 		" -R " + work["Reference"] +
 		" -I " + work["TMPDIR"] + "/SID" + sampleName + ".dedup.indelrealigner.recal.bam " +
 		" --out " + work["TMPDIR"] + "/SID" + sampleName + ".dedup.indelrealigner.recal.reduced.bam " +
 		" -T ReduceReads "
 
-
 	cmds := []Cmd{{reduce, ""}}
 	RunIt(dryrun, cmds)
 }
 
-func (work Workflow) DoUnifiedGenotyper( dryrun bool){
-		sampleName := work["sampleName"]
+func (work Workflow) DoUnifiedGenotyper(dryrun bool) {
+	sampleName := work["sampleName"]
 	ug := work["JAVAGATK"] +
 		" -T  UnifiedGenotyper " +
 		" -glm BOTH -stand_call_conf 10 -stand_emit_conf 10 -nt 4 -out_mode EMIT_VARIANTS_ONLY " +
@@ -413,18 +403,16 @@ func (work Workflow) DoUnifiedGenotyper( dryrun bool){
 		work["UGinterval"]
 
 	cmds := []Cmd{{ug, ""}}
-		RunIt(dryrun, cmds)
-		
-		
-			ugzip := work["BGZIP"] + " -c " + work["TMPDIR"] + "/SID" + sampleName + ".UG.vcf  > " + work["TMPDIR"] + "/SID" + sampleName + ".UG.vcf.gz " + " ; " + work["TABIX"] + " -p vcf " + work["TMPDIR"] + "/SID" + sampleName + ".UG.vcf.gz "
-	
+	RunIt(dryrun, cmds)
+
+	ugzip := work["BGZIP"] + " -c " + work["TMPDIR"] + "/SID" + sampleName + ".UG.vcf  > " + work["TMPDIR"] + "/SID" + sampleName + ".UG.vcf.gz " + " ; " + work["TABIX"] + " -p vcf " + work["TMPDIR"] + "/SID" + sampleName + ".UG.vcf.gz "
 
 	cmds = []Cmd{{ugzip, ""}}
 	RunIt(dryrun, cmds)
 }
 
-func (work Workflow) DoHaplotypeCaller( dryrun bool){
-		sampleName := work["sampleName"]
+func (work Workflow) DoHaplotypeCaller(dryrun bool) {
+	sampleName := work["sampleName"]
 	hc := work["JAVAGATK"] +
 		" -T  HaplotypeCaller " +
 		" -R " + work["Reference"] +
@@ -432,35 +420,26 @@ func (work Workflow) DoHaplotypeCaller( dryrun bool){
 		" -o " + work["TMPDIR"] + "/SID" + sampleName + ".HC.vcf  " +
 		" -stand_call_conf 10 -stand_emit_conf 10 " +
 		work["UGinterval"]
-		
-		cmds := []Cmd{ {hc, ""}}
-			RunIt(dryrun, cmds)
-			
-			
-			hczip := work["BGZIP"] + " -c " + work["TMPDIR"] + "/SID" + sampleName + ".HC.vcf  > " + work["TMPDIR"] + "/SID" + sampleName + ".HC.vcf.gz " + " ; " + work["TABIX"] + " -p vcf " + work["TMPDIR"] + "/SID" + sampleName + ".HC.vcf.gz "
-			
+
+	cmds := []Cmd{{hc, ""}}
+	RunIt(dryrun, cmds)
+
+	hczip := work["BGZIP"] + " -c " + work["TMPDIR"] + "/SID" + sampleName + ".HC.vcf  > " + work["TMPDIR"] + "/SID" + sampleName + ".HC.vcf.gz " + " ; " + work["TABIX"] + " -p vcf " + work["TMPDIR"] + "/SID" + sampleName + ".HC.vcf.gz "
+
 	cmds = []Cmd{{hczip, ""}}
 	RunIt(dryrun, cmds)
-	
+
 }
 
-
-func (work Workflow ) CopyBack (dryrun bool){
-//copy back
+func (work Workflow) CopyBack(dryrun bool) {
+	//copy back
 	excludes := "--exclude dedup.bam --exclude indelrealigner.bam --exclude dedup.bai --exclude indelrealigner.bai --exclude sorted.bai --exclude sorted.bam --exclude .sai --exclude .vcf "
-	copyBack := work["S3cmd"] + " " + work["S3cfg.base"] + " " + excludes + " sync " + work["TMPDIR"] + " " + work["BAMBUCKET"] + "/"
-	
+	copyBack := work["S3cmd"] + " -c " + work["S3cfg.base"] + " " + excludes + " sync " + work["TMPDIR"] + " " + work["BAMBUCKET"] + "/"
+
 	cmds := []Cmd{{copyBack, ""}}
 	RunIt(dryrun, cmds)
 
 }
-
-
-
-
-
-
-
 
 /**************** LOW level functions ***********************/
 
@@ -481,12 +460,11 @@ func IsDir(dir string) (err error, ok bool) {
 	return
 }
 
-
 func Trace(s string) string {
-        fmt.Printf("%v Entering %s\n", time.Now(), s)
-        return s
+	fmt.Printf("%v Entering %s\n", time.Now(), s)
+	return s
 }
 
 func Un(s string) {
-        fmt.Printf("%v Leaving %s\n", time.Now(), s)
+	fmt.Printf("%v Leaving %s\n", time.Now(), s)
 }
