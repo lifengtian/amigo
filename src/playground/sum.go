@@ -14,10 +14,10 @@ func sum(n []int) int {
 	return s
 }
 
-func sumOfN( n []int, N int) int {
+func sumOfN(n []int, N int) int {
 	s := 0
 	for _, v := range n {
-		s += int(math.Pow(float64(v), float64(N) ) ) 
+		s += int(math.Pow(float64(v), float64(N)))
 	}
 	return s
 }
@@ -29,7 +29,7 @@ func main() {
 	//fmt.Println( sum(numbers[:] ) )
 	//fmt.Println( sum(n2 ) )
 
-	for i :=1 ; i<10 ; i++ {
-		fmt.Printf("n=%d\t%d\n",i, sumOfN ( numbers[:], i ) )
+	for i := 1; i < 10; i++ {
+		fmt.Printf("n=%d\t%d\n", i, sumOfN(numbers[:], i))
 	}
 }
