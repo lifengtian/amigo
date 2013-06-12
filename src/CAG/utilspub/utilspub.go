@@ -1,4 +1,3 @@
-
 package utilspub
 
 import (
@@ -176,9 +175,7 @@ func (w Workflow) Init(jsonFileName string, sampleName string, dryrun bool) {
 
 	if tmp := os.Getenv("TMPDIR") ; tmp != "" {
 	w["TMPDIR"] = tmp + "/" + sampleName
-	} else {
-	w["TMPDIR"] = "/scratch1/tianl" + "/" + sampleName
-	}
+	} 
 
 	w["Fastq"] = w["TMPDIR"] 
 	w["sampleName"] = sampleName
@@ -186,7 +183,10 @@ func (w Workflow) Init(jsonFileName string, sampleName string, dryrun bool) {
 	// Prepare interval, only make sense for exome
 	w["UGinterval"] = " -L " + w["Exons"] + "  -L " + w["TargetBed"] + " --interval_padding 50 "
 
-	w.GetToolsDBs(dryrun)
+	//TODO`
+	//w.GetToolsDBs(dryrun)
+	prepDirs := "mkdir -p " +  w["Fastq"]
+        RunIt(dryrun, []Cmd{{prepDirs,""}})
 
 	verbose := true
 
@@ -203,8 +203,8 @@ func (w Workflow) Finish() {
 
 // GetToolsDBs
 func (work Workflow) GetToolsDBs(dryrun bool) {
-	prepDirs := "mkdir -p " +  work["Fastq"] + "/" + work["sampleName"]
-	RunIt(dryrun, []Cmd{{prepDirs,""}})
+	//prepDirs := "mkdir -p " +  work["Fastq"] 
+	//RunIt(dryrun, []Cmd{{prepDirs,""}})
 
 	if !IsFile(work["PIPELINE"] + "/" + work["Tools"]) {
 		tools := work["S3cmd"] + " -c " + work["S3cfg.pipeline"] + " get s3://cagpipelines/" + work["Tools"] + " " + work["PIPELINE"] + "/"
@@ -241,8 +241,8 @@ func (work Workflow) Run(dryrun bool) {
 
 func (work Workflow) GetFastq(dryrun bool) {
 	sampleName := work["sampleName"]
-	r1 := work["Fastq"] + "/" + sampleName + "/pe_1.fq.gz"
-	r2 := work["Fastq"] + "/" + sampleName + "/pe_2.fq.gz"
+	r1 := work["Fastq"] +  "/pe_1.fq.gz"
+	r2 := work["Fastq"] + "/pe_2.fq.gz"
 
 	s1 := work["TMPDIR"] + "/pe_1.sai"
 	s2 := work["TMPDIR"] + "/pe_2.sai"
@@ -253,8 +253,8 @@ func (work Workflow) GetFastq(dryrun bool) {
 	pu := work["PU"]
 	cn := work["CN"]
 
-	getFastq1 := work["S3cmd"] + " -c " + work["S3cfg.base"] + "  sync " + work["FASTQBUCKET"] + "/" + sampleName + "/pe_1.fq.gz " + work["Fastq"] + "/" + sampleName + "/"
-	getFastq2 := work["S3cmd"] + " -c  " + work["S3cfg.base"] + "   sync " + work["FASTQBUCKET"] + "/" + sampleName + "/pe_2.fq.gz " + work["Fastq"] + "/" + sampleName + "/"
+	getFastq1 := work["S3cmd"] + " -c " + work["S3cfg.base"] + "  sync " + work["FASTQBUCKET"] + "/" + sampleName + "/pe_1.fq.gz " + work["Fastq"] +  "/"
+	getFastq2 := work["S3cmd"] + " -c  " + work["S3cfg.base"] + "   sync " + work["FASTQBUCKET"] + "/" + sampleName + "/pe_2.fq.gz " + work["Fastq"] + "/"
 
 	fmt.Fprintln(os.Stderr, r1, r2, s1, s2, lb, pl, pu, cn, getFastq1, getFastq2)
 
@@ -263,9 +263,8 @@ func (work Workflow) GetFastq(dryrun bool) {
 }
 
 func (work Workflow) DoFastqc(dryrun bool) {
-	sampleName := work["sampleName"]
-	r1 := work["Fastq"] + "/" + sampleName + "/pe_1.fq.gz"
-	r2 := work["Fastq"] + "/" + sampleName + "/pe_2.fq.gz"
+	r1 := work["Fastq"] +  "/pe_1.fq.gz"
+	r2 := work["Fastq"] + "/pe_2.fq.gz"
 	fastqc1 := work["FASTQC"] + "/fastqc -o " + work["TMPDIR"] + " " + r1
 	fastqc2 := work["FASTQC"] + "/fastqc -o " + work["TMPDIR"] + " " + r2
 
@@ -275,9 +274,8 @@ func (work Workflow) DoFastqc(dryrun bool) {
 
 // BWA align paired end reads
 func (work Workflow) DoBWAAlnPE(dryrun bool) {
-	sampleName := work["sampleName"]
-	r1 := work["Fastq"] + "/" + sampleName + "/pe_1.fq.gz"
-	r2 := work["Fastq"] + "/" + sampleName + "/pe_2.fq.gz"
+	r1 := work["Fastq"] +  "/pe_1.fq.gz"
+	r2 := work["Fastq"] +  "/pe_2.fq.gz"
 
 	s1 := work["TMPDIR"] + "/pe_1.sai"
 	s2 := work["TMPDIR"] + "/pe_2.sai"
@@ -292,8 +290,8 @@ func (work Workflow) DoBWAAlnPE(dryrun bool) {
 // BWA sampe
 func (work Workflow) DoBWASampe(dryrun bool) {
 	sampleName := work["sampleName"]
-	r1 := work["Fastq"] + "/" + sampleName + "/pe_1.fq.gz"
-	r2 := work["Fastq"] + "/" + sampleName + "/pe_2.fq.gz"
+	r1 := work["Fastq"] + "/pe_1.fq.gz"
+	r2 := work["Fastq"] +  "/pe_2.fq.gz"
 
 	s1 := work["TMPDIR"] + "/pe_1.sai"
 	s2 := work["TMPDIR"] + "/pe_2.sai"
@@ -437,8 +435,9 @@ func (work Workflow) DoHaplotypeCaller(dryrun bool) {
 
 func (work Workflow) CopyBack(dryrun bool) {
 	//copy back
-	excludes := "--exclude dedup.bam --exclude indelrealigner.bam --exclude dedup.bai --exclude indelrealigner.bai --exclude sorted.bai --exclude sorted.bam --exclude .sai --exclude .vcf --exclude .fq.gz "
-	copyBack := work["S3cmd"] + " -c " + work["S3cfg.base"] + " " + excludes + " sync " + work["TMPDIR"] + " " + work["BAMBUCKET"] + "/"
+	excludes := "--exclude dedup.bam --exclude indelrealigner.bam --exclude dedup.bai --exclude indelrealigner.bai --exclude sorted.bai --exclude sorted.bam --exclude .sai //--exclude .vcf --exclude .fq.gz "
+	//copyBack := work["S3cmd"] + " -c " + work["S3cfg.base"] + " " + excludes + " sync " + work["TMPDIR"] + " " + work["BAMBUCKET"] + "/"
+	copyBack := "rsync " +  " " + excludes + " sync " + work["TMPDIR"] + " /gluster/ "
 
 	cmds := []Cmd{{copyBack, ""}}
 	RunIt(dryrun, cmds)
