@@ -629,4 +629,6 @@ Finished Chap 2 of Shiwei Xu's Go book.
 I skipped the bubblesort and quicksort though. 
 Acme is pretty cool!
 
+Jan 1, 2016
+Howdy I am back to golang 1.7.4!
 
